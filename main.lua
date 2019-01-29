@@ -1,21 +1,30 @@
 math.randomseed(os.time())
 
+function printInfo()
+    love.graphics.setColor(100, 100, 100, 10)
+    love.graphics.print('Num of enemies: ' .. EnemiesController:countEnemies(), 2, 200)
+    love.graphics.print('Rounds shot: ' .. roundsShot, 2, 215)
+    love.graphics.print('Prusix killed: ' .. enemiesKilled, 2, 230)
+end
+
+function love.conf(t)
+    t.console = true
+    t.window.width = 1024
+    t.window.height = 768
+end
+
+
 move_offset = 1
-default_cooldown_time = 20
+default_cooldown_time = 30
 
 EnemiesController = {}
 EnemiesController.enList = {}
 EnemiesController.image = love.graphics.newImage('ghost.png')
+maxEnemies = 10
 
 roundsShot = 0
 enemiesKilled = 0
 
--- function getColor()
---     c_red = math.random(1, 25) * 100
---     c_gr = math.random(1, 25) * 100
---     c_bl = math.random(1, 25) * 100
---     return c_red, c_gr, c_bl
--- end
 
 function shouldSpawn()
     if math.random(1, 300) == 74 then
@@ -25,20 +34,22 @@ end
 
 function EnemiesController:sprawnEnemy()
     en = {}
-    en.x = math.random(20, 650)
+    en.x = math.random(20, 900)
     en.y = 0
     en.speed = math.random(1, 3) * 0.2
     en.bullets = {}
     -- en.scalex = 1 + math.random(1, 10) * 0.1
     en.scalex = 1
     en.scaley = en.scalex
+    en.height = 50
+    en.width = 50
     en.checkIfDead = function(bullets)
         for bulIndex, b in ipairs(bullets) do
-            enYTop = en.y + 50
-            enXTop = en.x + 50
-            if enYTop >= b.y then
-                if b.x >= en.x and b.x <= enXTop then
-                    enemiesKilled = enemiesKilled + 1
+            enemy_right = en.x + 50
+            enemy_bottom = en.y + 50
+
+            if b.x >= en.x and b.x <= enemy_right then
+                if b.y <= enemy_bottom + 5 then
                     return true, bulIndex
                 end
             end
@@ -83,8 +94,40 @@ function love.load()
     end
 end
 
+
+function countHitsSimple(enemies, bullets)
+    for enIndex, en in ipairs(enemies) do
+        for bulIndex, bul in ipairs(bullets) do
+            if bul.y <= en.y + en.height and bul.x > en.x and bul.x <= en.x + en.width then
+                table.remove(enemies, enIndex)
+                table.remove(bullets, bulIndex)
+            end
+        end
+    end
+end
+
 function love.update(dt)
     player.cooldown = player.cooldown - 1
+
+    countHitsSimple(EnemiesController.enList, player.bullets)
+
+    for enIndex, enemy in ipairs(EnemiesController.enList) do
+        enemy.y = enemy.y + enemy.speed
+        if enemy.y >= 760 then
+            table.remove(EnemiesController.enList, enIndex)
+        end
+    end
+
+    for bulIndex, bullet in ipairs(player.bullets) do
+        bullet.y = bullet.y - 1
+        if bullet.y < -10 then
+            table.remove(player.bullets, bulIndex)
+        end
+    end
+
+    if shouldSpawn() and EnemiesController:countEnemies() < maxEnemies then
+        EnemiesController:sprawnEnemy()
+    end
 
     if love.keyboard.isDown('right') then
         player.move_right()
@@ -95,48 +138,10 @@ function love.update(dt)
     if love.keyboard.isDown('space') then
         player.fire()
     end
-
-    for i, e in ipairs(EnemiesController.enList) do
-        e.y = (e.y + e.speed)
-        dead, inde = e.checkIfDead(player.bullets)
-        if dead then
-            table.remove(EnemiesController.enList, i)
-            table.remove(player.bullets, inde)
-        end
-    end
-
-    for index, bullet in ipairs(player.bullets) do
-        if bullet.y < -10 then
-            table.remove(player.bullets, index)
-        end
-        bullet.y = bullet.y - 1
-    end
-
-    if shouldSpawn() then
-        EnemiesController:sprawnEnemy()
-    end
-
-    checkBulletCollision()
-end
-
-
-function checkBulletCollision()
-    -- widths = {}
-    -- -- for _, pos in pairs(EnemiesController.enList)
-    -- for _, b in pairs(player.bullets) do
-    --     for i, e in ipairs(EnemiesController.enList) do
-    --         if b.y == e.y then
-    --             table.remove(EnemiesController.enList, i)
-    --         end
-    --     end
-    -- end
 end
 
 function love.draw()
-    love.graphics.setColor(100, 100, 100, 10)
-    love.graphics.print('Num of enemies: ' .. EnemiesController:countEnemies(), 2, 200)
-    love.graphics.print('Rounds shot: ' .. roundsShot, 2, 215)
-    love.graphics.print('Prusix killed: ' .. enemiesKilled, 2, 230)
+    printInfo()
 
     love.graphics.setColor(0, 100, 0)
     love.graphics.rectangle('fill', player.x, player.y, 30, 30)
@@ -144,8 +149,6 @@ function love.draw()
     love.graphics.setColor(0, 100, 0)
     for _, bullet in pairs(player.bullets) do
         love.graphics.rectangle('fill', bullet.x, bullet.y, 5, 5)
-    love.graphics.setColor(1, 1, 1)
-        love.graphics.print(bullet.y, bullet.x + 5, bullet.y - 10)
     end
 
     love.graphics.setColor(255, 255, 255)
@@ -156,6 +159,5 @@ function love.draw()
             0,
             enemy.scalex, enemy.scaley
         )
-        love.graphics.rectangle('line', enemy.x, enemy.y, 50, 50)
     end
 end
