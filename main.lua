@@ -15,7 +15,7 @@ end
 
 
 move_offset = 1
-default_cooldown_time = 30
+default_cooldown_time = 50
 
 EnemiesController = {}
 EnemiesController.enList = {}
@@ -24,6 +24,8 @@ maxEnemies = 10
 
 roundsShot = 0
 enemiesKilled = 0
+
+bulletImage = love.graphics.newImage('waterm.png')
 
 
 function shouldSpawn()
@@ -34,27 +36,12 @@ end
 
 function EnemiesController:sprawnEnemy()
     en = {}
-    en.x = math.random(20, 900)
+    en.x = math.random(20, 750)
     en.y = 0
     en.speed = math.random(1, 3) * 0.2
     en.bullets = {}
-    -- en.scalex = 1 + math.random(1, 10) * 0.1
-    en.scalex = 1
-    en.scaley = en.scalex
     en.height = 50
     en.width = 50
-    en.checkIfDead = function(bullets)
-        for bulIndex, b in ipairs(bullets) do
-            enemy_right = en.x + 50
-            enemy_bottom = en.y + 50
-
-            if b.x >= en.x and b.x <= enemy_right then
-                if b.y <= enemy_bottom + 5 then
-                    return true, bulIndex
-                end
-            end
-        end
-    end
     table.insert(self.enList, en)
 end
 
@@ -64,6 +51,22 @@ end
 
 function love.load()
     player = {}
+    player.x = 350
+    player.y = 525
+    player.cooldown = default_cooldown_time
+    player.bullets = {}
+    player.image = love.graphics.newImage('prusix_pencil.png')
+    player.fire = function()
+        if player.cooldown > 0 then
+            return
+        end
+        roundsShot = roundsShot + 1
+        player.cooldown = default_cooldown_time
+        bullet = {}
+        bullet.x = player.x
+        bullet.y = player.y - 20
+        table.insert(player.bullets, bullet)
+    end
     player.move_left = function()
         if player.x < 20 then
             return
@@ -76,22 +79,6 @@ function love.load()
         end
         player.x = player.x + move_offset
     end
-    player.x = 350
-    player.cooldown = default_cooldown_time
-    player.y = 550
-    player.bullets = {}
-    player.fire = function()
-        if player.cooldown > 0 then
-            return
-        end
-        roundsShot = roundsShot + 1
-        player.cooldown = default_cooldown_time
-        bullet = {}
-        bullet.x = player.x + 13
-        bullet.y = player.y
-        table.insert(player.bullets, bullet)
-        -- end
-    end
 end
 
 
@@ -101,6 +88,7 @@ function countHitsSimple(enemies, bullets)
             if bul.y <= en.y + en.height and bul.x > en.x and bul.x <= en.x + en.width then
                 table.remove(enemies, enIndex)
                 table.remove(bullets, bulIndex)
+                enemiesKilled = enemiesKilled + 1
             end
         end
     end
@@ -111,6 +99,8 @@ function love.update(dt)
 
     countHitsSimple(EnemiesController.enList, player.bullets)
 
+    -- moving enemy towards player and removing them
+    -- if below the line if sight
     for enIndex, enemy in ipairs(EnemiesController.enList) do
         enemy.y = enemy.y + enemy.speed
         if enemy.y >= 760 then
@@ -118,6 +108,8 @@ function love.update(dt)
         end
     end
 
+    -- shooting bullets towards enemies and
+    -- removing them if left the screen
     for bulIndex, bullet in ipairs(player.bullets) do
         bullet.y = bullet.y - 1
         if bullet.y < -10 then
@@ -125,6 +117,7 @@ function love.update(dt)
         end
     end
 
+    -- spawning enemies
     if shouldSpawn() and EnemiesController:countEnemies() < maxEnemies then
         EnemiesController:sprawnEnemy()
     end
@@ -143,21 +136,21 @@ end
 function love.draw()
     printInfo()
 
-    love.graphics.setColor(0, 100, 0)
-    love.graphics.rectangle('fill', player.x, player.y, 30, 30)
+    -- love.graphics.setColor(255, 255, 255)
+    -- love.graphics.rectangle('fill', player.x, player.y, 30, 30)
+    love.graphics.draw(player.image, player.x, player.y, 0, 0.5, 0.5)
 
-    love.graphics.setColor(0, 100, 0)
+    -- love.graphics.setColor(0, 100, 0)
     for _, bullet in pairs(player.bullets) do
-        love.graphics.rectangle('fill', bullet.x, bullet.y, 5, 5)
+        -- love.graphics.rectangle('fill', bullet.x, bullet.y, 5, 5)
+        love.graphics.draw(bulletImage, bullet.x, bullet.y, 0, .5, .5)
     end
 
     love.graphics.setColor(255, 255, 255)
     for _, enemy in pairs(EnemiesController.enList) do
         love.graphics.draw(
             EnemiesController.image,
-            enemy.x, enemy.y,
-            0,
-            enemy.scalex, enemy.scaley
+            enemy.x, enemy.y, 0, 1, 1
         )
     end
 end
