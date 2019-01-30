@@ -2,9 +2,12 @@ math.randomseed(os.time())
 
 function printInfo()
     love.graphics.setColor(100, 100, 100, 10)
-    love.graphics.print('Num of enemies: ' .. EnemiesController:countEnemies(), 2, 200)
+    love.graphics.print('On screen enemies: ' .. EnemiesController:countEnemies(), 2, 200)
     love.graphics.print('Rounds shot: ' .. roundsShot, 2, 215)
     love.graphics.print('Prusix killed: ' .. enemiesKilled, 2, 230)
+    love.graphics.print('Prusix escaped: ' .. enemiesBehindTheWall, 2, 245)
+    love.graphics.print('FPS: ' .. tostring(love.timer.getFPS()), 2, 260)
+    love.graphics.print('Hit rate: ' .. tostring(enemiesKilled / roundsShot), 2, 275)
 end
 
 function love.conf(t)
@@ -17,13 +20,19 @@ end
 move_offset = 1
 default_cooldown_time = 50
 
+prusixes = {}
+table.insert(prusixes, love.graphics.newImage('prusix1.png'))
+table.insert(prusixes, love.graphics.newImage('prusix2.png'))
+table.insert(prusixes, love.graphics.newImage('prusix3.png'))
+
 EnemiesController = {}
 EnemiesController.enList = {}
-EnemiesController.image = love.graphics.newImage('ghost.png')
-maxEnemies = 10
+-- EnemiesController.image = 
+maxEnemies = 15
 
 roundsShot = 0
 enemiesKilled = 0
+enemiesBehindTheWall = 0
 
 bulletImage = love.graphics.newImage('waterm.png')
 
@@ -42,6 +51,7 @@ function EnemiesController:sprawnEnemy()
     en.bullets = {}
     en.height = 50
     en.width = 50
+    en.skin = prusixes[math.random(#prusixes)]
     table.insert(self.enList, en)
 end
 
@@ -105,6 +115,7 @@ function love.update(dt)
         enemy.y = enemy.y + enemy.speed
         if enemy.y >= 760 then
             table.remove(EnemiesController.enList, enIndex)
+            enemiesBehindTheWall = enemiesBehindTheWall + 1
         end
     end
 
@@ -149,7 +160,8 @@ function love.draw()
     love.graphics.setColor(255, 255, 255)
     for _, enemy in pairs(EnemiesController.enList) do
         love.graphics.draw(
-            EnemiesController.image,
+            -- EnemiesController.image,
+            enemy.skin,
             enemy.x, enemy.y, 0, 1, 1
         )
     end
